@@ -1,45 +1,83 @@
 
-class ExprTest {
-  
+
+// Sets the wildcard value for all values of a class
+// or for the values of one field.
+facet class PatternWildcard {
+  const Obj? value := null
+}
+
+// Excludes this field from being considered in patterns equality
+facet class PatternExclude {}
+
+
+class ExprTest
+{
   Expr simplify( Expr e )
   {
     switch (e) {
-      case UnOp("-", UnOp("-", null)):
+      case UnOp( "-", UnOp("-", null) ):
           return ((e as UnOp).arg as UnOp).arg
       
-      case BinOp("+", null, Number(0)):
+      case BinOp( "+", null, Number( 0 ) ):
           return (e as BinOp).left
       
-      case BinOp("*", null, Number(1)):
+      case BinOp( "*", null, Number( 1 ) ):
           return (e as BinOp).left
       
       default: return e
     }
   }
   
+//  Corresponding Scala code:
+//
+//  scala> simplifyTop(UnOp("-", UnOp("-", Var("x"))))
+//  res4: Expr = Var(x)
+//
+//    def simplifyTop(expr: Expr): Expr = expr match {
+//      case UnOp("-", UnOp("-", e))  => e   // Double negation
+//      case BinOp("+", e, Number(0)) => e   // Adding zero
+//      case BinOp("*", e, Number(1)) => e   // Multiplying by one
+//      case _ => expr
+//    }
+
+  
+  Void main()
+  {
+    echo( "Begin test pattern" )
+    expr1 := UnOp("-", UnOp("-", Var("x") ) )
+
+    echo( "Before: " )
+    Env.cur.out.writeObj( expr1, ["indent":2] )
+    
+    expr2 := simplify( expr1 )
+    
+    echo
+    echo( "After: " )
+    Env.cur.out.writeObj( expr2, ["indent":2] )
+    
+    echo
+    echo( "End test pattern" )
+  }
+
+  
+  // To works around F4 bug on the facet method
   static Facet? typeFacet( Type t, Type facetType )
   {
     return t.facets().find { it.typeof == facetType }
   }
   
-  static Str serializableToStr(Obj? obj)
-  {
-    return Buf().writeObj(obj).readAllStr
-  }
-  
-  
+  // To works around F4 bug on the facet method
   static Facet? slotFacet( Slot t, Type facetType )
   {
     return t.facets().find { it.typeof == facetType }
   }
-  
+
+  // Tests if other matches ths, checking for compatible type, traversing the fields and
+  // checking them recursivly.
   static Bool testEquals( Obj ths, Obj? other )
   {
-    if ( other == null ) return false
-    if ( !other.typeof.fits( ths.typeof ) ) return false
-    
-//    PatternClass? patFac := typeFacet( ths.typeof, PatternClass# )
-//    PatternWildcard? classWild := typeFacet(ths, PatternWildcard# )
+    if ( other == null
+          || ths.typeof != other.typeof ) return false
     
     return ths.typeof.fields.all( |Field field -> Bool| {
         
@@ -67,48 +105,14 @@ class ExprTest {
         return (hasWildcard && (valThis == wildcard || valOther == wildcard))
             || valThis == valOther
       } )
-  }
-  
-
-//  scala> simplifyTop(UnOp("-", UnOp("-", Var("x"))))
-//  res4: Expr = Var(x)
-//
-//    def simplifyTop(expr: Expr): Expr = expr match {
-//      case UnOp("-", UnOp("-", e))  => e   // Double negation
-//      case BinOp("+", e, Number(0)) => e   // Adding zero
-//      case BinOp("*", e, Number(1)) => e   // Multiplying by one
-//      case _ => expr
-//    }
-
-
-  Void main()
-  {
-    echo( "Begin test pattern" )
-    
-    expr := UnOp("-", UnOp("-", Var("x") ) )
-    
-    echo( "Before: " )
-    Env.cur.out.writeObj( expr, ["indent":2] )
-    echo()
-    echo( "After: " )
-    Env.cur.out.writeObj( simplify( expr ), ["indent":2] )
-    echo()
-    echo( "End test pattern" )
-  }
-  
+  }  
 }
-
 
 @Serializable
 @PatternWildcard{ value = null }
 const class Expr {
-  
   override Bool equals( Obj? other ) {
     return PatternUtil.testEquals( this, other )
-  }
-  
-  override Str toStr() {
-    return ExprTest.serializableToStr( this )
   }
 }
 
@@ -148,7 +152,6 @@ const class BinOp : Expr {
     this.left = left
     this.right = right
   }
-  
 }
 
   
