@@ -112,7 +112,7 @@ class ExprTest
 @PatternWildcard{ value = null }
 const class Expr {
   override Bool equals( Obj? other ) {
-    return PatternUtil.testEquals( this, other )
+    return ExprTest.testEquals( this, other )
   }
 }
 
